@@ -1,0 +1,12 @@
+{
+  "name": "Dunia — video chat with the world",
+  "short_name": "Dunia",
+  "description": "Random video chat with people around the world.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D1322",
+  "theme_color": "#0D1322",
+  "icons": [
+    { "src": "/img/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

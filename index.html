@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dunia — video chat with people around the world</title>
+<meta name="description" content="Free random video chat with people around the world. Choose country, gender and language. Available in 20 languages.">
+<meta name="theme-color" content="#0D1322">
+<meta property="og:title" content="Dunia — say hi to the world">
+<meta property="og:description" content="One tap connects you to a real person somewhere in the world.">
+<meta property="og:type" content="website">
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/vendor/fonts/bricolage/index.css">
+<link rel="stylesheet" href="/vendor/fonts/jakarta/index.css">
+<link rel="stylesheet" href="/vendor/flag-icons/css/flag-icons.min.css">
+<link rel="stylesheet" href="/css/app.css">
+<script type="module" src="/js/app.js"></script>
+</head>
+<body data-state="boot" data-chat="open">
+
+<!-- Icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-brand" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#46D6FF"/><stop offset="1" stop-color="#FF6B7A"/>
+    </linearGradient>
+  </defs>
+  <symbol id="i-logo" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="url(#g-brand)" stroke-width="2.6"/><path d="M4 16.5c3 0 3.2-5.5 6.2-5.5s3 11 6 11 3-11 6-11 3.2 5.5 5.8 5.5" fill="none" stroke="url(#g-brand)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-mic-off" viewBox="0 0 24 24"><path d="M15 9.3V6a3 3 0 0 0-5.7-1.3M9 9v2a3 3 0 0 0 5 2.2M5 11a7 7 0 0 0 11.5 5.4M19 11a7 7 0 0 1-.6 2.8M12 18v3M3 3l18 18"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><path d="M15 10.2l5.2-3.2v10l-5.2-3.2"/><rect x="3" y="6" width="12" height="12" rx="2.5"/></symbol>
+  <symbol id="i-cam-off" viewBox="0 0 24 24"><path d="M15 10.2l5.2-3.2v10l-5.2-3.2M10.5 6H12.5A2.5 2.5 0 0 1 15 8.5v2.2M15 15.5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 3 15.5v-7A2.5 2.5 0 0 1 5.5 6M3 3l18 18"/></symbol>
+  <symbol id="i-flip" viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.8l1.9-2.2h5.6L16.7 6h1.8A2.5 2.5 0 0 1 21 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5z"/><path d="M9 12a3 3 0 0 1 5.3-1.9M15 13a3 3 0 0 1-5.3 1.9M14.6 8.4v1.9h-1.9M9.4 16.6v-1.9h1.9"/></symbol>
+  <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.2a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 0 1-12.3 7.6L3.5 20.5l1-4.4A8.5 8.5 0 1 1 20.5 12z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11.5l-2.2 4 2.2 4H5"/></symbol>
+  <symbol id="i-block" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.7 5.7l12.6 12.6"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 5.5l10 6.5-10 6.5z"/><path d="M19 5v14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7.5 5v14l11-7z" fill="currentColor"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="M8.7 8.7h.01M15.3 15.3h.01M15.3 8.7h.01M8.7 15.3h.01M12 12h.01" stroke-width="3"/></symbol>
+  <symbol id="i-verified" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.4l2.7 2.7L16 9.8"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3L10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7.5 3v5.5c0 4.7-3.2 8-7.5 9.5-4.3-1.5-7.5-4.8-7.5-9.5V6z"/><path d="M9 12l2 2 4-4.2"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6.5 9.5l5.5 5.5 5.5-5.5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></symbol>
+  <symbol id="i-translate" viewBox="0 0 24 24"><path d="M4 5h9M8.5 3v2M6 5c.8 3.5 3.3 6.3 6.5 7.5M11 5c-.8 3.6-3.5 6.4-7 7.6M12.5 21l4-10 4 10M13.8 18h5.4"/></symbol>
+</svg>
+
+<header class="topbar">
+  <a class="brand" href="/" aria-label="Dunia">
+    <svg class="brand-mark" aria-hidden="true"><use href="#i-logo"/></svg>
+    <span class="wordmark">dunia</span>
+  </a>
+  <span class="tagline" data-i18n="app.tagline">Say hi to the world.</span>
+  <div class="grow"></div>
+  <span class="pill online-pill">
+    <span class="dot" aria-hidden="true"></span>
+    <span id="onlineCount">—</span>
+    <span class="pill-label" data-i18n="top.online">Online</span>
+  </span>
+  <button class="top-btn" id="langBtn" type="button" aria-haspopup="listbox" data-i18n-attr="title:top.language">
+    <svg class="ic" aria-hidden="true"><use href="#i-globe"/></svg>
+    <span id="langLabel">English</span>
+  </button>
+  <button class="top-btn top-icon" id="settingsBtn" type="button" data-i18n-attr="aria-label:top.settings,title:top.settings">
+    <svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg>
+  </button>
+  <button class="profile-chip" id="profileChip" type="button" hidden data-i18n-attr="title:top.profile">
+    <span class="fi fis" id="profileFlag"></span>
+    <span id="profileName" dir="auto"></span>
+  </button>
+</header>
+
+<main class="main" id="main">
+
+  <!-- ============ LOBBY ============ -->
+  <section class="lobby" id="lobby" aria-labelledby="lobbyTitle">
+    <div class="selfie" id="selfie">
+      <video id="localPreview" autoplay playsinline muted></video>
+      <div class="cam-state" id="camState">
+        <svg class="ic ic-xl" aria-hidden="true"><use href="#i-cam-off"/></svg>
+        <strong id="camStateTitle"></strong>
+        <span id="camStateHint"></span>
+        <button class="btn btn-primary btn-sm" id="camStateBtn" type="button"></button>
+      </div>
+      <div class="selfie-bar">
+        <span class="you-tag">
+          <span data-i18n="lobby.you">You</span>
+          <span class="meter" id="micMeter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        </span>
+        <span class="selfie-actions">
+          <button class="round-btn" id="lobbyMic" type="button"><svg class="ic on" aria-hidden="true"><use href="#i-mic"/></svg><svg class="ic off" aria-hidden="true"><use href="#i-mic-off"/></svg></button>
+          <button class="round-btn" id="lobbyCam" type="button"><svg class="ic on" aria-hidden="true"><use href="#i-cam"/></svg><svg class="ic off" aria-hidden="true"><use href="#i-cam-off"/></svg></button>
+        </span>
+      </div>
+    </div>
+
+    <div class="lobby-panel">
+      <h1 class="lobby-title" id="lobbyTitle" data-i18n="lobby.title">Talk to someone new, right now.</h1>
+      <p class="lobby-sub" data-i18n="lobby.sub"></p>
+
+      <div class="filters">
+        <h2 class="filters-title" data-i18n="filter.title"></h2>
+
+        <div class="field">
+          <span class="field-label" id="lblGender" data-i18n="filter.gender"></span>
+          <div class="segmented" id="genderFilter" role="radiogroup" aria-labelledby="lblGender">
+            <button type="button" role="radio" data-val="any" data-i18n="filter.any"></button>
+            <button type="button" role="radio" data-val="male" data-i18n="filter.men"></button>
+            <button type="button" role="radio" data-val="female" data-i18n="filter.women"></button>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <span class="field-label" id="lblCountry" data-i18n="filter.country"></span>
+            <button class="select-btn" id="countryFilterBtn" type="button" aria-haspopup="listbox" aria-labelledby="lblCountry countryFilterBtn"></button>
+          </div>
+          <div class="field">
+            <span class="field-label" id="lblLanguage" data-i18n="filter.language"></span>
+            <button class="select-btn" id="languageFilterBtn" type="button" aria-haspopup="listbox" aria-labelledby="lblLanguage languageFilterBtn"></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label"><span data-i18n="filter.interests"></span> <small data-i18n="filter.interestsHint"></small></span>
+          <div class="chips" id="interestChips"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-start" id="startBtn" type="button">
+        <svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>
+        <span data-i18n="lobby.start">Start video chat</span>
+      </button>
+      <p class="estimate" id="estimate" aria-live="polite"></p>
+      <p class="fine">
+        <svg class="ic ic-sm" aria-hidden="true"><use href="#i-shield"/></svg>
+        <span><span data-i18n="lobby.safety"></span>
+        <a href="/legal#guidelines" data-i18n="legal.guidelines"></a> ·
+        <a href="/legal#terms" data-i18n="legal.terms"></a> ·
+        <a href="/legal#privacy" data-i18n="legal.privacy"></a></span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ CALL STAGE ============ -->
+  <section class="stage-wrap" id="stageWrap">
+    <div class="stage-col">
+      <div class="stage" id="stage">
+        <video id="remoteVideo" autoplay playsinline></video>
+
+        <div class="peer-camoff" id="peerCamOff">
+          <span class="avatar" id="peerAvatar"></span>
+          <span data-i18n="peer.camOff"></span>
+        </div>
+
+        <button class="reveal" id="revealBtn" type="button">
+          <svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>
+          <span data-i18n="peer.reveal"></span>
+        </button>
+
+        <div class="peer-card" id="peerCard">
+          <div class="peer-line">
+            <span class="fi fis peer-flag" id="peerFlag"></span>
+            <strong id="peerName" dir="auto"></strong>
+            <svg class="ic ic-sm verified" id="peerVerified" aria-hidden="true"><use href="#i-verified"/></svg>
+            <span class="peer-country" id="peerCountry"></span>
+            <button class="peer-report" id="peerReportBtn" type="button" data-i18n-attr="aria-label:call.report,title:call.report"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-flag"/></svg></button>
+          </div>
+          <div class="peer-meta" id="peerMeta"></div>
+          <span class="peer-badge" id="peerMuted" hidden>
+            <svg class="ic ic-sm" aria-hidden="true"><use href="#i-mic-off"/></svg>
+            <span data-i18n="peer.muted"></span>
+          </span>
+        </div>
+
+        <div class="hud">
+          <span class="quality" id="quality" data-level="good"><i></i><i></i><i></i></span>
+          <span class="timer" id="callTimer">00:00</span>
+        </div>
+
+        <div class="reactions" id="reactionsLayer" aria-hidden="true"></div>
+
+        <div class="pip corner-br" id="pip">
+          <video id="localVideo" autoplay playsinline muted></video>
+        </div>
+
+        <div class="overlay" id="overlay">
+          <div class="radar" aria-hidden="true">
+            <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+            <span class="core"><svg><use href="#i-logo"/></svg></span>
+          </div>
+          <div class="overlay-text">
+            <h2 id="overlayTitle"></h2>
+            <p id="overlaySub"></p>
+          </div>
+          <div class="overlay-chips" id="overlayChips"></div>
+          <p class="overlay-meta" id="overlayMeta"></p>
+          <div class="quiet" id="quietBox" hidden>
+            <p data-i18n="search.quiet"></p>
+            <div class="row">
+              <button class="btn btn-primary" id="widenBtn" type="button" data-i18n="search.widen"></button>
+              <button class="btn btn-ghost" id="keepBtn" type="button" data-i18n="search.keep"></button>
+            </div>
+          </div>
+          <div class="row" id="endedActions" hidden>
+            <button class="btn btn-primary" id="overlayNext" type="button" data-i18n="ended.next"></button>
+            <button class="btn btn-ghost" id="overlayLobby" type="button" data-i18n="ended.lobby"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls" id="controls">
+        <button class="btn btn-next" id="nextBtn" type="button">
+          <svg class="ic" aria-hidden="true"><use href="#i-skip"/></svg>
+          <span class="lbl" data-i18n="call.next">Next</span>
+          <kbd>Esc</kbd>
+        </button>
+        <button class="btn btn-stop" id="stopBtn" type="button" data-i18n-attr="title:call.stop"><svg class="ic" aria-hidden="true"><use href="#i-stop"/></svg><span class="lbl" data-i18n="call.stop">Stop</span></button>
+        <span class="ctl-sep" aria-hidden="true"></span>
+        <button class="ctl" id="micBtn" type="button"><svg class="ic on" aria-hidden="true"><use href="#i-mic"/></svg><svg class="ic off" aria-hidden="true"><use href="#i-mic-off"/></svg></button>
+        <button class="ctl" id="camBtn" type="button"><svg class="ic on" aria-hidden="true"><use href="#i-cam"/></svg><svg class="ic off" aria-hidden="true"><use href="#i-cam-off"/></svg></button>
+        <button class="ctl" id="flipBtn" type="button" hidden data-i18n-attr="aria-label:call.flip,title:call.flip"><svg class="ic" aria-hidden="true"><use href="#i-flip"/></svg></button>
+        <span class="react-wrap">
+          <button class="ctl" id="reactBtn" type="button" aria-haspopup="true" aria-expanded="false" data-i18n-attr="aria-label:call.react,title:call.react"><svg class="ic" aria-hidden="true"><use href="#i-smile"/></svg></button>
+          <span class="react-pop" id="reactPop" hidden></span>
+        </span>
+        <span class="grow"></span>
+        <button class="ctl" id="chatToggle" type="button" data-i18n-attr="aria-label:call.chat,title:call.chat"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg><span class="badge" id="chatBadge"></span></button>
+        <button class="ctl" id="blockBtn" type="button" data-i18n-attr="aria-label:call.block,title:call.block"><svg class="ic" aria-hidden="true"><use href="#i-block"/></svg></button>
+        <button class="ctl ctl-report" id="reportBtn" type="button" data-i18n-attr="title:call.report"><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg><span class="lbl" data-i18n="call.report">Report</span></button>
+      </div>
+    </div>
+
+    <aside class="chat" id="chat" aria-labelledby="chatTitle">
+      <header class="chat-head">
+        <strong id="chatTitle" data-i18n="chat.title">Chat</strong>
+        <span class="chat-peer" id="chatPeer"></span>
+        <button class="icon-btn chat-close" id="chatClose" type="button" data-i18n-attr="aria-label:common.close"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+      </header>
+      <div class="messages" id="messages" role="log" aria-live="polite"></div>
+      <div class="typing" id="typing" hidden></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <input id="chatInput" maxlength="500" data-i18n-attr="placeholder:chat.placeholder,aria-label:chat.placeholder" disabled>
+        <button type="submit" id="sendBtn" data-i18n-attr="aria-label:chat.send" disabled><svg class="ic flip-rtl" aria-hidden="true"><use href="#i-send"/></svg></button>
+      </form>
+    </aside>
+  </section>
+</main>
+
+<!-- ============ ONBOARDING ============ -->
+<div class="onboard" id="onboard" hidden>
+  <div class="onboard-card" role="dialog" aria-modal="true" aria-labelledby="onbTitle">
+    <div class="onb-top">
+      <button class="icon-btn" id="onbBack" type="button" data-i18n-attr="aria-label:common.back"><svg class="ic flip-rtl" aria-hidden="true"><use href="#i-back"/></svg></button>
+      <div class="progress" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <span class="onb-step" id="onbStep"></span>
+    </div>
+
+    <div class="onb-pane" data-step="1">
+      <p class="onb-kicker"><svg class="ic brand-mini" aria-hidden="true"><use href="#i-logo"/></svg><span data-i18n="onb.welcome"></span></p>
+      <h2 class="onb-title" id="onbTitle" data-i18n="onb.name.title"></h2>
+      <p class="onb-hint" data-i18n="onb.name.hint"></p>
+      <div class="name-row">
+        <input id="onbName" class="input" maxlength="20" autocomplete="nickname" spellcheck="false" data-i18n-attr="placeholder:onb.name.placeholder,aria-label:onb.name.placeholder">
+        <button class="btn btn-ghost" id="onbRandom" type="button"><svg class="ic" aria-hidden="true"><use href="#i-dice"/></svg><span data-i18n="onb.name.random"></span></button>
+      </div>
+    </div>
+
+    <div class="onb-pane" data-step="2" hidden>
+      <h2 class="onb-title" data-i18n="onb.gender.title"></h2>
+      <p class="onb-hint" data-i18n="onb.gender.hint"></p>
+      <div class="gender-cards" id="onbGender" role="radiogroup">
+        <button type="button" role="radio" data-val="male"><span class="g-sym" aria-hidden="true">♂</span><span data-i18n="gender.male"></span></button>
+        <button type="button" role="radio" data-val="female"><span class="g-sym" aria-hidden="true">♀</span><span data-i18n="gender.female"></span></button>
+      </div>
+    </div>
+
+    <div class="onb-pane" data-step="3" hidden>
+      <h2 class="onb-title" data-i18n="onb.country.title"></h2>
+      <p class="onb-hint" id="onbCountryHint"></p>
+      <button class="select-btn select-lg" id="onbCountryBtn" type="button" aria-haspopup="listbox"></button>
+      <h3 class="onb-sub" data-i18n="onb.langs.title"></h3>
+      <p class="onb-hint" data-i18n="onb.langs.hint"></p>
+      <div class="chips" id="onbLangs"></div>
+      <label class="check">
+        <input type="checkbox" id="onbAdult">
+        <span id="onbAdultText"></span>
+      </label>
+    </div>
+
+    <div class="onb-pane" data-step="4" hidden>
+      <h2 class="onb-title" data-i18n="onb.cam.title"></h2>
+      <p class="onb-hint" data-i18n="onb.cam.hint"></p>
+      <div class="onb-preview" id="onbPreview">
+        <video id="onbVideo" autoplay playsinline muted></video>
+        <svg class="ic ic-xl onb-preview-icon" aria-hidden="true"><use href="#i-cam"/></svg>
+        <span class="meter" id="onbMeter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+      </div>
+      <p class="onb-cam-msg" id="onbCamMsg" hidden></p>
+    </div>
+
+    <p class="onb-err" id="onbErr" role="alert" hidden></p>
+    <div class="onb-actions">
+      <button class="btn btn-ghost" id="onbSkip" type="button" hidden data-i18n="onb.cam.skip"></button>
+      <button class="btn btn-primary btn-wide" id="onbNext" type="button" data-i18n="common.continue">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div class="modal" id="settingsModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <header class="modal-head">
+      <h2 id="settingsTitle" data-i18n="settings.title"></h2>
+      <button class="icon-btn" type="button" data-close data-i18n-attr="aria-label:common.close"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <div class="modal-body">
+      <section class="set-group">
+        <h3 data-i18n="settings.appearance"></h3>
+        <div class="set-row"><span id="lblSetLang" data-i18n="settings.language"></span><button class="select-btn" id="setLangBtn" type="button" aria-haspopup="listbox" aria-labelledby="lblSetLang setLangBtn"></button></div>
+        <div class="set-row"><span id="lblTheme" data-i18n="settings.theme"></span>
+          <div class="segmented" id="themeSeg" role="radiogroup" aria-labelledby="lblTheme">
+            <button type="button" role="radio" data-val="system" data-i18n="theme.system"></button>
+            <button type="button" role="radio" data-val="dark" data-i18n="theme.dark"></button>
+            <button type="button" role="radio" data-val="light" data-i18n="theme.light"></button>
+          </div>
+        </div>
+      </section>
+      <section class="set-group">
+        <h3 data-i18n="settings.devices"></h3>
+        <div class="set-row"><label for="setCamera" data-i18n="settings.camera"></label><select class="select" id="setCamera"></select></div>
+        <div class="set-row"><label for="setMic" data-i18n="settings.mic"></label><select class="select" id="setMic"></select></div>
+        <div class="set-row" id="speakerRow"><label for="setSpeaker" data-i18n="settings.speaker"></label><select class="select" id="setSpeaker"></select></div>
+      </section>
+      <section class="set-group">
+        <h3 data-i18n="settings.chat"></h3>
+        <label class="switch-row"><span data-i18n="settings.safeView"></span><input type="checkbox" class="switch" id="setSafeView"></label>
+        <label class="switch-row"><span data-i18n="settings.autoNext"></span><input type="checkbox" class="switch" id="setAutoNext"></label>
+        <label class="switch-row"><span data-i18n="settings.sounds"></span><input type="checkbox" class="switch" id="setSounds"></label>
+      </section>
+      <section class="set-group">
+        <h3 data-i18n="settings.shortcuts"></h3>
+        <dl class="shortcuts">
+          <div><dt><kbd>Esc</kbd></dt><dd data-i18n="short.next"></dd></div>
+          <div><dt><kbd>M</kbd></dt><dd data-i18n="short.mute"></dd></div>
+          <div><dt><kbd>V</kbd></dt><dd data-i18n="short.cam"></dd></div>
+          <div><dt><kbd>/</kbd></dt><dd data-i18n="short.chat"></dd></div>
+        </dl>
+      </section>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn btn-ghost" id="editProfileBtn" type="button" data-i18n="settings.profile"></button>
+      <button class="link-danger" id="resetBtn" type="button" data-i18n="settings.reset"></button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ REPORT ============ -->
+<div class="modal" id="reportModal" hidden>
+  <div class="modal-card modal-sm" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+    <header class="modal-head">
+      <h2 id="reportTitle"></h2>
+      <button class="icon-btn" type="button" data-close data-i18n-attr="aria-label:common.close"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <p class="modal-hint" data-i18n="report.hint"></p>
+    <div class="reasons" id="reportReasons">
+      <button type="button" data-reason="underage" data-i18n="report.underage"></button>
+      <button type="button" data-reason="sexual" data-i18n="report.sexual"></button>
+      <button type="button" data-reason="harassment" data-i18n="report.harassment"></button>
+      <button type="button" data-reason="hate" data-i18n="report.hate"></button>
+      <button type="button" data-reason="violence" data-i18n="report.violence"></button>
+      <button type="button" data-reason="spam" data-i18n="report.spam"></button>
+      <button type="button" data-reason="fake" data-i18n="report.fake"></button>
+    </div>
+    <div class="report-alt"><button class="link-danger" id="reportBlockOnly" type="button" data-i18n="report.blockInstead"></button></div>
+  </div>
+</div>
+
+<!-- ============ BLOCK ============ -->
+<div class="modal" id="blockModal" hidden>
+  <div class="modal-card modal-sm" role="dialog" aria-modal="true" aria-labelledby="blockTitle">
+    <header class="modal-head"><h2 id="blockTitle"></h2></header>
+    <p class="modal-hint" data-i18n="block.hint"></p>
+    <div class="row row-end">
+      <button class="btn btn-ghost" type="button" data-close data-i18n="common.cancel"></button>
+      <button class="btn btn-danger" id="blockConfirm" type="button" data-i18n="block.confirm"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BANNED ============ -->
+<div class="banned" id="banned" hidden>
+  <div class="banned-card">
+    <svg class="ic ic-xl" aria-hidden="true"><use href="#i-shield"/></svg>
+    <h2 data-i18n="banned.title"></h2>
+    <p id="bannedText"></p>
+    <a href="/legal#guidelines" data-i18n="legal.guidelines"></a>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="sr-only" id="announcer" aria-live="assertive"></div>
+</body>
+</html>

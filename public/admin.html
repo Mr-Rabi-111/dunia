@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="dark" data-script="latin">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Dunia — Moderation console</title>
+<link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/vendor/fonts/bricolage/index.css">
+<link rel="stylesheet" href="/vendor/fonts/jakarta/index.css">
+<link rel="stylesheet" href="/vendor/flag-icons/css/flag-icons.min.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/admin.css">
+<script type="module" src="/js/theme.js"></script>
+<script type="module" src="/js/admin.js"></script>
+</head>
+<body class="admin">
+
+<header class="topbar">
+  <a class="brand" href="/" aria-label="Dunia">
+    <img src="/img/logo.svg" alt="" width="30" height="30">
+    <span class="wordmark">dunia</span>
+  </a>
+  <span class="tagline">Moderation console</span>
+  <div class="grow"></div>
+  <span class="live-pill" id="livePill" hidden><span class="dot"></span><span id="liveText">Live</span></span>
+  <button class="top-btn" id="signOut" type="button" hidden>Sign out</button>
+</header>
+
+<main class="admin-main">
+  <!-- Sign in -->
+  <section class="login" id="login">
+    <form class="login-card" id="loginForm">
+      <h1>Sign in to moderate</h1>
+      <p>Paste the <code>ADMIN_TOKEN</code> configured on the server. It stays in this browser tab only.</p>
+      <input class="input" id="tokenInput" type="password" autocomplete="off" placeholder="Admin token" aria-label="Admin token" required>
+      <p class="login-err" id="loginErr" role="alert" hidden></p>
+      <button class="btn btn-primary" type="submit">Sign in</button>
+    </form>
+  </section>
+
+  <!-- Console -->
+  <section class="console" id="console" hidden>
+    <div class="kpis" id="kpis"></div>
+    <p class="kpi-meta" id="kpiMeta"></p>
+
+    <div class="console-grid">
+      <section class="panel" aria-labelledby="reportsTitle">
+        <header class="panel-head">
+          <h2 id="reportsTitle">Reports</h2>
+          <div class="tabs" id="reportTabs" role="tablist">
+            <button role="tab" data-status="open" aria-selected="true">Open</button>
+            <button role="tab" data-status="actioned" aria-selected="false">Actioned</button>
+            <button role="tab" data-status="dismissed" aria-selected="false">Dismissed</button>
+            <button role="tab" data-status="" aria-selected="false">All</button>
+          </div>
+        </header>
+        <div class="reports" id="reports"></div>
+      </section>
+
+      <div class="side">
+        <section class="panel" aria-labelledby="countriesTitle">
+          <header class="panel-head"><h2 id="countriesTitle">People online by country</h2></header>
+          <div class="bars" id="countryBars"></div>
+        </section>
+        <section class="panel" aria-labelledby="bansTitle">
+          <header class="panel-head"><h2 id="bansTitle">Active restrictions</h2></header>
+          <div class="bans" id="bans"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="lightbox" id="lightbox" hidden>
+  <img id="lightboxImg" alt="Reported video snapshot">
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+</body>
+</html>

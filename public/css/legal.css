@@ -1,0 +1,23 @@
+body.legal { display: block; height: auto; min-height: 100dvh; overflow: auto; }
+.legal .topbar { position: sticky; top: 0; background: var(--bg); }
+.legal .top-btn { text-decoration: none; }
+.doc { max-width: 760px; margin: 0 auto; padding: 28px 20px 80px; line-height: 1.65; font-size: 16px; }
+.doc h1 { font-family: var(--font-display); font-size: clamp(30px, 5vw, 40px); letter-spacing: -0.025em; line-height: 1.1; margin: 48px 0 10px; scroll-margin-top: 80px; }
+.doc section:first-of-type h1 { margin-top: 28px; }
+.doc h2 { font-size: 18px; margin: 30px 0 6px; }
+.doc p, .doc li { color: var(--muted); max-width: 68ch; }
+.doc li { margin: 6px 0; }
+.doc strong { color: var(--text); }
+.doc .lead { font-size: 18px; color: var(--text); }
+.doc mark { background: var(--cyan-soft); color: var(--cyan); padding: 0 4px; border-radius: 4px; }
+.doc table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+.doc th, .doc td { text-align: start; padding: 10px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.doc th { color: var(--text); font-weight: 700; }
+.doc td { color: var(--muted); }
+.doc section { scroll-margin-top: 80px; }
+.template-note { padding: 14px 16px; border-radius: 14px; border: 1px dashed var(--cyan-line); background: var(--cyan-soft); font-size: 14px; color: var(--text); }
+.doc-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.doc-nav a { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); text-decoration: none; font-size: 14px; font-weight: 650; }
+.doc-nav a:hover { border-color: var(--line-2); }
+.updated { font-size: 14px; margin-top: 24px; }
+@media (max-width: 640px) { .doc table { font-size: 13px; } .doc th, .doc td { padding: 8px 4px; } }

@@ -1,0 +1,13 @@
+# Dunia blocked-word list — one word or phrase per line, any language/script.
+# Matched case-insensitively as whole words in chat (masked as •••) and
+# inside usernames (name rejected). Lines starting with # are ignored.
+#
+# Ship your own list here. Common choices: a vendor list (e.g. from your
+# moderation provider) or community-maintained lists for each market you
+# launch in. Keep slurs, sexual solicitation terms and scam phrases for every
+# language you support. Changes load on restart.
+#
+# Examples of spam / solicitation phrases often used on random-chat apps:
+onlyfans
+cashapp
+free tokens

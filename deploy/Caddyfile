@@ -1,0 +1,7 @@
+# Caddy obtains and renews the TLS certificate automatically.
+# WebSockets are proxied out of the box; X-Forwarded-For is set for the app.
+{$DOMAIN} {
+	encode zstd gzip
+	header -Server
+	reverse_proxy app:3000
+}
