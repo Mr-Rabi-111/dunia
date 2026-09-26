@@ -59,6 +59,21 @@
       </section>
 
       <div class="side">
+        <section class="panel" aria-labelledby="paymentsTitle">
+          <header class="panel-head">
+            <h2 id="paymentsTitle">Payments</h2>
+            <span class="pay-mode" id="payMode"></span>
+          </header>
+          <div class="rev" id="revenue"></div>
+          <h3 class="sub-head">Waiting for confirmation</h3>
+          <div class="orders" id="orders"></div>
+          <details class="reconcile">
+            <summary>Confirm from bank statement</summary>
+            <p>Paste your UPI / bank statement (any format). Every submitted payment whose 12-digit UTR appears in it is approved.</p>
+            <textarea class="input" id="reconcileText" rows="4" placeholder="Paste statement text here"></textarea>
+            <button class="btn btn-primary" id="reconcileBtn" type="button">Approve matching payments</button>
+          </details>
+        </section>
         <section class="panel" aria-labelledby="countriesTitle">
           <header class="panel-head"><h2 id="countriesTitle">People online by country</h2></header>
           <div class="bars" id="countryBars"></div>

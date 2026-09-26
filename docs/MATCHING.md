@@ -101,7 +101,15 @@ score(S, C) =  3 × min(sharedInterests, 3)
             +  4 × (S and C share a spoken language ? 1 : 0)
             +  1 × (same continent ? 1 : 0)                 ← lower latency, better video
             +  2 × log2(1 + C.waitSeconds / 10)             ← fairness ("aging")
+            +  2 × (C has Premium ? 1 : 0)                  ← Premium: matched a little faster
 ```
+
+**Premium and the gender filter.** Choosing Men or Women (`filters.gender ≠ any`) needs an active
+Premium pass: the server answers `match:find` with `premium_required` otherwise, and when a pass
+expires while someone is waiting, the server switches their gender filter back to `any` and re-queues
+them. Premium never breaks mutuality: a Premium user still only meets people whose own filters
+accept them. The +2 bonus is the same as 10 seconds of waiting, so it moves Premium users up the line
+without letting anyone starve. See [MONETIZATION.md](MONETIZATION.md).
 
 ### Why the aging term matters
 

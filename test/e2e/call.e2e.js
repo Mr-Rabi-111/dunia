@@ -7,7 +7,9 @@
  *
  * Covers: UI language auto-detection (Hindi, Arabic RTL), onboarding, a real
  * peer-to-peer WebRTC video call, chat with contact masking, mute state reaching
- * the other side, reporting with a snapshot, and the moderation console.
+ * the other side, reporting with a snapshot, the moderation console, and
+ * Premium: gender filter → paywall → free trial, UPI checkout (QR + UTR),
+ * rewards, and payment approval in the console.
  * Screenshots go to test-results/.
  */
 import { spawn } from 'node:child_process';
@@ -40,7 +42,8 @@ const steps = [];
 const step = (msg) => { steps.push(msg); console.log(`  ✓ ${msg}`); };
 
 async function newUser(locale, viewport = { width: 1366, height: 820 }) {
-  const ctx = await browser.newContext({ locale, viewport, permissions: ['camera', 'microphone'] });
+  const mobile = viewport.width < 600;
+  const ctx = await browser.newContext({ locale, viewport, isMobile: mobile, hasTouch: mobile, permissions: ['camera', 'microphone'] });
   const page = await ctx.newPage();
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`[${locale}] ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`[${locale}] ${e.message}`));
@@ -82,6 +85,20 @@ try {
   step('both completed onboarding (name → gender → country → camera)');
   await A.screenshot({ path: `${OUT}/lobby-hi.png` });
 
+  // Premium: choosing "Women" opens the paywall; the free trial applies the filter.
+  await A.click('#genderFilter button[data-val="female"]');
+  await A.waitForSelector('#payModal:not([hidden]) .plan');
+  assert.equal(await A.getAttribute('#genderFilter button[data-val="female"]', 'aria-checked'), 'false');
+  assert.equal(await A.locator('.plan').count(), 5);
+  step('choosing Women opens the Premium paywall with 5 plans (filter not applied yet)');
+  await A.screenshot({ path: `${OUT}/paywall-hi.png` });
+  await A.click('#trialBtn');
+  await A.waitForSelector('#payDoneView:not([hidden])');
+  await A.click('#payDoneView [data-close]');
+  await A.waitForSelector('#genderFilter button[data-val="female"][aria-checked="true"]');
+  await A.waitForSelector('#premChip.is-active');
+  step('free trial starts Premium and applies the Women filter it was opened for');
+
   await A.click('#startBtn');
   await A.waitForSelector('body[data-state="searching"]');
   await B.click('#startBtn');
@@ -98,6 +115,8 @@ try {
   step(`real peer-to-peer video is flowing (${video.w}px wide, playing)`);
   assert.match(await A.textContent('#peerCard'), /Layla/);
   step('each side sees the other’s name and flag');
+  assert.ok(await B.$('#peerCard.is-premium'), 'Premium badge on the partner card');
+  step('the Premium user carries a gold badge for their partner');
 
   await A.fill('#chatInput', 'Hi Layla, add me on www.spam.com');
   await A.press('#chatInput', 'Enter');
@@ -120,6 +139,37 @@ try {
   await A.waitForSelector('body:is([data-state="ended"],[data-state="searching"])');
   step('reporting ends the call and returns the reporter to searching');
 
+  // UPI checkout on a phone, in English
+  const C = await newUser('en-IN', { width: 390, height: 844 });
+  await onboard(C, { name: 'Ravi', gender: 'male', country: 'India' });
+  await C.click('#genderFilter button[data-val="male"]');
+  await C.waitForSelector('#payModal:not([hidden]) .plan');
+  await C.screenshot({ path: `${OUT}/paywall-mobile-en.png` });
+  await C.click('.plan[data-plan="min15"]');
+  await C.click('#payActions .btn-gold');
+  await C.waitForSelector('#payUpiView:not([hidden])');
+  await C.waitForFunction(() => document.getElementById('upiQr').naturalWidth > 0);
+  const href = await C.getAttribute('#upiOpen', 'href');
+  assert.match(href, /^upi:\/\/pay\?pa=abirkumar111%40ybl&pn=Dunia&am=1\.00&cu=INR&tn=Dunia(%20|\+)DN/);
+  assert.match(await C.textContent('#upiAmount'), /₹\s?1/);
+  step('₹1 / 15 min checkout shows a UPI QR code and a upi:// link for any UPI app');
+  await C.screenshot({ path: `${OUT}/upi-mobile-en.png` });
+  await C.fill('#utrInput', '123');
+  await C.click('#utrSubmit');
+  await C.waitForSelector('#payErr:not([hidden])');
+  await C.fill('#utrInput', '401234567890');
+  await C.click('#utrSubmit');
+  await C.waitForSelector('#payDoneView:not([hidden])');
+  await C.click('#payDoneView [data-close]');
+  await C.waitForSelector('#genderFilter button[data-val="male"][aria-checked="true"]');
+  step('a 12-digit UTR turns Premium on and applies the Men filter');
+  await C.screenshot({ path: `${OUT}/lobby-premium-mobile-en.png`, fullPage: true });
+  await C.click('#perkDaily');
+  await C.waitForSelector('#rewardsModal:not([hidden])');
+  await C.waitForFunction(() => document.getElementById('refLink').textContent.includes('?ref='));
+  step('rewards: daily bonus streak, invite link and “Your world”');
+  await C.screenshot({ path: `${OUT}/rewards-mobile-en.png` });
+
   const admin = await (await browser.newContext({ viewport: { width: 1400, height: 900 } })).newPage();
   admin.on('pageerror', (e) => errors.push(`[admin] ${e.message}`));
   await admin.goto(`${URL}/admin`);
@@ -129,7 +179,12 @@ try {
   assert.match(await admin.textContent('.report'), /Anoop/);
   assert.ok(await admin.$('.report .snap img'), 'report carries a snapshot');
   step('moderation console shows the report with a video snapshot');
+  await admin.waitForSelector('.order');
+  assert.match(await admin.textContent('.order'), /401234567890/);
   await admin.screenshot({ path: `${OUT}/admin.png`, fullPage: true });
+  await admin.click('.order .btn-primary');
+  await admin.waitForSelector('#orders .empty');
+  step('the console lists the UPI payment with its UTR and approves it');
 
   assert.deepEqual(errors, [], `console errors:\n${errors.join('\n')}`);
   step('no console errors');

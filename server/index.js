@@ -16,6 +16,9 @@ import { iceServersFor } from './turn.js';
 import { limited, ConnectionCounter } from './rate-limit.js';
 import { metrics } from './metrics.js';
 import { adminRouter, checkToken } from './admin.js';
+import { Premium, PayError } from './premium.js';
+import { PlayVerifier, loadServiceAccount, playAccountId } from './play.js';
+import QRCode from 'qrcode';
 import {
   COUNTRY_CODES, CONTINENT_OF, SPOKEN_CODES, INTERESTS, GENDERS, REPORT_REASONS, REACTIONS,
 } from '../shared/data.js';
@@ -61,6 +64,21 @@ export async function createDunia(overrides = {}) {
     canPair: (a, b, now) => relations.canPair(a, b, now),
   });
   const conns = new ConnectionCounter();
+  const premium = new Premium({
+    dataDir: config.dataDir,
+    persist: overrides.persist ?? true,
+    upiVpa: config.upiVpa,
+    upiName: config.upiName,
+    verifyMode: config.upiVerify,
+    provisionalMaxMin: config.provisionalMaxMin,
+    trialMin: config.trialMin,
+    referralMin: config.referralMin,
+    dayOffsetMin: config.rewardDayOffsetMin,
+  }).load();
+  const play = overrides.playVerifier || new PlayVerifier({
+    packageName: config.playPackage,
+    serviceAccount: loadServiceAccount(config.playServiceAccount),
+  });
 
   // ------------------------------------------------------------------ HTTP
   const app = express();
@@ -100,6 +118,23 @@ export async function createDunia(overrides = {}) {
   app.get('/healthz', (req, res) => {
     res.set('Cache-Control', 'no-store');
     res.json({ ok: true, ...snapshot(), uptimeSec: Math.round((Date.now() - metrics.startedAt) / 1000) });
+  });
+
+  // Android App Links: lets https://<domain>/?ref=CODE invite links open the Dunia app.
+  app.get('/.well-known/assetlinks.json', (req, res) => {
+    const fps = config.androidCertSha256;
+    res.json(fps.length ? config.androidPackages.map((pkg) => ({
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: { namespace: 'android_app', package_name: pkg, sha256_cert_fingerprints: fps },
+    })) : []);
+  });
+
+  // UPI QR for a payment order (order ids are unguessable UUIDs).
+  app.get('/api/pay/qr/:id.svg', async (req, res) => {
+    const o = premium.getOrder(req.params.id);
+    if (!o || o.channel !== 'upi') return res.status(404).end();
+    const svg = await QRCode.toString(premium.upiUri(o), { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#0D1322', light: '#FFFFFF' } });
+    res.set('Cache-Control', 'no-store').type('image/svg+xml').send(svg);
   });
 
   app.get('/metrics', (req, res) => {
@@ -186,12 +221,30 @@ export async function createDunia(overrides = {}) {
     if (!d.partnerId) return;
     const partner = sockets().get(d.partnerId);
     const matchId = d.matchId;
-    if (d.matchedAt) metrics.observeCall((Date.now() - d.matchedAt) / 1000);
+    const seconds = d.matchedAt ? (Date.now() - d.matchedAt) / 1000 : 0;
+    if (d.matchedAt) metrics.observeCall(seconds);
     resetMatch(d);
-    if (partner && partner.data.partnerId === socket.id) {
+    const paired = partner && partner.data.partnerId === socket.id;
+    if (paired) {
       resetMatch(partner.data);
       partner.emit('peer:left', { matchId });
     }
+    // Rewards: unlock today's daily reward, pay referral bonuses.
+    for (const devId of paired ? [d.deviceId, partner.data.deviceId] : [d.deviceId]) {
+      for (const p of premium.noteCall(devId, seconds)) notifyReward(p);
+    }
+  }
+
+  function socketsOfDevice(deviceId) {
+    return [...sockets().values()].filter((s) => s.data.deviceId === deviceId);
+  }
+  function pushPremium(deviceId) {
+    const status = premium.status(deviceId);
+    for (const s of socketsOfDevice(deviceId)) s.emit('premium:status', status);
+  }
+  function notifyReward({ deviceId, minutes, kind }) {
+    for (const s of socketsOfDevice(deviceId)) s.emit('reward:event', { kind, minutes });
+    pushPremium(deviceId);
   }
 
   function publicPeer(target, viewer) {
@@ -202,6 +255,7 @@ export async function createDunia(overrides = {}) {
       country: p.country,
       languages: p.languages,
       verified: p.verified,
+      premium: premium.isActive(target.data.deviceId),
       sharedInterests: target.data.interests.filter((t) => viewer.data.interests.includes(t)),
     };
   }
@@ -217,6 +271,7 @@ export async function createDunia(overrides = {}) {
       languages: d.profile.languages,
       interests: d.interests,
       filters: d.filters,
+      premium: premium.isActive(d.deviceId),
     };
   }
 
@@ -304,6 +359,7 @@ export async function createDunia(overrides = {}) {
     metrics.inc('connections_total');
     Object.assign(d, { profile: null, filters: ANY_FILTERS, interests: [] });
     resetMatch(d);
+    premium.touch(d.deviceId, d.ip);
 
     socket.emit('welcome', {
       deviceId: d.deviceId,
@@ -312,6 +368,16 @@ export async function createDunia(overrides = {}) {
       lockCountry: config.lockCountryToIp && !!d.ipCountry,
       online: onlineCount(),
       reportSnapshots: config.reportSnapshots,
+      premium: premium.status(d.deviceId),
+      pay: {
+        upi: !!config.upiVpa,
+        upiVpa: config.upiVpa,
+        upiName: config.upiName,
+        verifyMode: premium.verifyMode,
+        provisionalMaxMin: config.provisionalMaxMin,
+        play: play.enabled,
+        playAccountId: playAccountId(d.deviceId),
+      },
     });
 
     const ackFn = (a) => (typeof a === 'function' ? a : () => {});
@@ -345,7 +411,12 @@ export async function createDunia(overrides = {}) {
       p = p && typeof p === 'object' ? p : {};
       if (!d.profile) return socket.emit('match:error', { error: 'profile_required' });
       if (limited(socket, 'find', 30, 10_000)) return socket.emit('match:error', { error: 'rate_limited' });
-      d.filters = cleanFilters(p.filters);
+      const filters = cleanFilters(p.filters);
+      // Meeting anyone is free; choosing men-only or women-only needs Premium.
+      if (filters.gender !== 'any' && !premium.isActive(d.deviceId)) {
+        return socket.emit('match:error', { error: 'premium_required' });
+      }
+      d.filters = filters;
       d.interests = cleanInterests(p.interests);
       endMatch(socket);
       enqueue(socket);
@@ -469,6 +540,60 @@ export async function createDunia(overrides = {}) {
       ack({ ok: true, online: onlineCount(), matching, countries: countryCounts() });
     });
 
+    // ------------------------------------------------ premium & payments
+    const payHandler = (name, max, windowMs, fn) => socket.on(name, async (p, ack) => {
+      if (typeof p === 'function') { ack = p; p = {}; } // emitted without a payload
+      ack = ackFn(ack);
+      if (limited(socket, name, max, windowMs)) return ack({ ok: false, error: 'rate_limited' });
+      try {
+        ack({ ok: true, ...(await fn(p && typeof p === 'object' ? p : {})) });
+        pushPremium(d.deviceId);
+      } catch (err) {
+        if (!(err instanceof PayError)) console.error(`[${name}]`, err);
+        ack({ ok: false, error: err instanceof PayError ? err.code : 'generic' });
+      }
+    });
+
+    payHandler('pay:create', 10, 60_000, ({ planId }) => {
+      const o = premium.createOrder(d.deviceId, planId);
+      metrics.inc('payments_created_total');
+      return { order: { id: o.id, code: o.code, inr: o.inr, planId: o.planId, uri: o.uri, qr: `/api/pay/qr/${o.id}.svg`, expiresAt: o.expiresAt } };
+    });
+
+    payHandler('pay:submit', 10, 60_000, ({ orderId, utr }) => {
+      const r = premium.submitUtr(d.deviceId, String(orderId || ''), utr);
+      metrics.inc('payments_submitted_total');
+      console.log(JSON.stringify({ evt: 'payment', id: r.order.id, code: r.order.code, inr: r.order.inr, status: r.status }));
+      return { status: r.status, grantedMinutes: r.grantedMinutes, until: r.until };
+    });
+
+    payHandler('pay:play', 10, 60_000, async ({ productId, purchaseToken }) => {
+      if (typeof productId !== 'string' || typeof purchaseToken !== 'string' || purchaseToken.length > 4096) throw new PayError('order');
+      if (!premium.productToPlan(productId)) throw new PayError('plan');
+      const v = await play.verifyProduct(productId, purchaseToken, playAccountId(d.deviceId));
+      if (!v.ok) throw new PayError(v.reason === 'pending' ? 'play_pending' : 'play_invalid');
+      const r = premium.grantPlay(d.deviceId, { productId, token: purchaseToken, orderId: v.orderId });
+      metrics.inc('payments_approved_total');
+      return { until: r.until };
+    });
+
+    payHandler('pay:restore', 5, 60_000, ({ ref }) => ({ until: premium.restore(d.deviceId, ref) }));
+
+    payHandler('reward:trial', 5, 60_000, () => ({ until: premium.claimTrial(d.deviceId, d.ip) }));
+    payHandler('reward:daily', 5, 60_000, () => premium.claimDaily(d.deviceId));
+    payHandler('reward:invite', 10, 60_000, () => ({ code: premium.referralCode(d.deviceId) }));
+    payHandler('reward:referral', 5, 60_000, ({ code }) => ({ accepted: premium.setReferrer(d.deviceId, code, d.ip) }));
+    payHandler('premium:get', 20, 60_000, () => ({ status: premium.status(d.deviceId) }));
+
+    socket.on('me:delete', (ack) => {
+      ack = ackFn(ack);
+      if (limited(socket, 'delete', 3, 60_000)) return ack({ ok: false });
+      endMatch(socket);
+      mm.remove(socket.id);
+      premium.deleteDevice(d.deviceId);
+      ack({ ok: true });
+    });
+
     socket.on('disconnect', () => {
       conns.dec(d.ip);
       mm.remove(socket.id);
@@ -496,16 +621,29 @@ export async function createDunia(overrides = {}) {
     safety.prune();
   }, 60_000));
 
-  app.use('/api/admin', adminRouter({ config, safety, metrics, snapshot, enforceBan, countryCounts }));
+  // Premium ran out: turn the gender filter off (never interrupts a live call).
+  timers.push(setInterval(() => {
+    for (const s of sockets().values()) {
+      const f = s.data.filters;
+      if (!f || f.gender === 'any' || premium.isActive(s.data.deviceId)) continue;
+      s.data.filters = { ...f, gender: 'any' };
+      if (mm.has(s.id)) { mm.remove(s.id); enqueue(s); }
+      s.emit('premium:expired');
+      s.emit('premium:status', premium.status(s.data.deviceId));
+    }
+  }, overrides.premiumWatchMs || 10_000));
+
+  app.use('/api/admin', adminRouter({ config, safety, metrics, snapshot, enforceBan, countryCounts, premium, pushPremium }));
 
   return {
-    app, server, io, mm, safety, relations, config, geoMode, blockedWordCount,
+    app, server, io, mm, safety, relations, premium, config, geoMode, blockedWordCount,
     listen(port = config.port, host = config.host) {
       return new Promise((resolve) => server.listen(port, host, () => resolve(server.address().port)));
     },
     async close() {
       timers.forEach(clearInterval);
       safety.flush();
+      premium.flush();
       io.emit('server:restarting');
       await new Promise((r) => io.close(() => r()));
     },

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Dunia" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/brand_bg</item>
+        <item name="colorPrimary">@color/brand_cyan</item>
+    </style>
+    <!-- Android 12+ system splash (and the compat splash below 12). -->
+    <style name="Theme.Dunia.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/brand_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Dunia</item>
+    </style>
+</resources>

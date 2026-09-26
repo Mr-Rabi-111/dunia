@@ -72,6 +72,22 @@ export const config = {
   autoBanHours: int(env.AUTO_BAN_HOURS, 24),
   repeatBanHours: int(env.REPEAT_BAN_HOURS, 24 * 7),
   ipBanHours: int(env.IP_BAN_HOURS, 2),
+
+  // --- Premium & payments ---
+  // UPI ID that receives payments (any UPI app can pay it). Set UPI_VPA= (empty) to turn UPI off.
+  upiVpa: env.UPI_VPA !== undefined ? env.UPI_VPA.trim() : 'abirkumar111@ybl',
+  upiName: env.UPI_PAYEE_NAME || 'Dunia',
+  upiVerify: env.UPI_VERIFY || 'provisional',          // provisional | manual
+  provisionalMaxMin: int(env.UPI_PROVISIONAL_MAX_MIN, 60),
+  trialMin: int(env.PREMIUM_TRIAL_MIN, 10),
+  referralMin: int(env.REFERRAL_REWARD_MIN, 30),
+  rewardDayOffsetMin: int(env.REWARD_DAY_OFFSET_MIN, 330), // daily rewards reset at midnight IST
+  playPackage: env.PLAY_PACKAGE_NAME || '',
+  playServiceAccount: env.PLAY_SERVICE_ACCOUNT_JSON || '',
+  // Android App Links (invite links open the app): SHA-256 fingerprints of your app signing
+  // key(s) from Play Console → App integrity. Comma-separated.
+  androidCertSha256: list(env.ANDROID_CERT_SHA256),
+  androidPackages: list(env.ANDROID_PACKAGES).length ? list(env.ANDROID_PACKAGES) : (env.PLAY_PACKAGE_NAME ? [env.PLAY_PACKAGE_NAME, `${env.PLAY_PACKAGE_NAME}.direct`] : []),
 };
 
 // Refuse placeholder / weak secrets: a copied .env.example must never expose
@@ -94,5 +110,7 @@ export function describeConfig() {
     `rematchCooldown=${config.rematchCooldownSec}s`,
     `admin=${config.adminToken ? 'enabled' : 'disabled'}`,
     `lockCountryToIp=${config.lockCountryToIp}`,
+    `upi=${config.upiVpa ? `${config.upiVpa}(${config.upiVerify})` : 'off'}`,
+    `play=${config.playPackage && config.playServiceAccount ? 'verify' : 'off'}`,
   ].join(' ');
 }

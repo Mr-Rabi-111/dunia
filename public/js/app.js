@@ -9,6 +9,12 @@ import { Media } from './media.js';
 import { Call } from './rtc.js';
 import { sounds } from './sounds.js';
 import { $, el, icon, flagEl, store, uuid, debounce, fmtClock, randomName } from './util.js';
+import { native, initNative, nativeCall } from './android.js';
+import {
+  initPremium, setServerInfo, setStatus as setPremiumStatus, onExpired as onPremiumExpired, onRewardEvent,
+  openPaywall, afterRegistered, notePeerCountry, showChip as showPremiumChip, premium, syncPlayPurchases,
+  render as renderPremium, resetLocal as resetPremiumLocal,
+} from './premium.js';
 
 /* ==========================================================================
    Constants & state
@@ -71,7 +77,15 @@ async function boot() {
   };
   sounds.enabled = S.settings.sounds;
   applyTheme();
-  await initI18n();
+  await Promise.all([initI18n(), initNative()]);
+  initPremium({
+    getSocket: () => socket,
+    toast,
+    openModal,
+    closeModals,
+    onActiveChange: onPremiumChange,
+  });
+  if (native.available) window.__duniaBack = handleBack;
 
   media.attachMeter($('micMeter'));
   media.attachMeter($('onbMeter'));
@@ -135,6 +149,12 @@ function connect() {
   socket.on('chat:typing', onTyping);
   socket.on('react', (emoji) => { if (S.state === 'connected') floatEmoji(emoji, false); });
   socket.on('banned', showBanned);
+  socket.on('premium:status', setPremiumStatus);
+  socket.on('premium:expired', () => {
+    if (S.filters.gender !== 'any') { S.filters.gender = 'any'; store.set('filters', S.filters); renderFilters(); renderOverlay(); }
+    onPremiumExpired();
+  });
+  socket.on('reward:event', onRewardEvent);
   socket.on('connect_error', (err) => {
     if (err.message === 'banned') showBanned(err.data || {});
     else if (err.message === 'too_many_connections') toast(t('toast.tooMany'), 6000);
@@ -151,6 +171,15 @@ async function onWelcome(w) {
   }
   setOnline(w.online);
   renderOnboardingDynamic();
+  const infoReady = setServerInfo(w); // sets premium status synchronously
+  if (!premium.active && S.filters.gender !== 'any') {
+    S.filters.gender = 'any';
+    store.set('filters', S.filters);
+    renderFilters();
+  }
+  infoReady.then(() => {
+    if (native.available && w.pay?.play) nativeCall('pending', {}, 15_000).then(syncPlayPurchases).catch(() => {});
+  });
   if (S.profile) {
     const res = await registerProfile(S.profile);
     if (!res.ok && res.error !== 'generic') {
@@ -178,6 +207,7 @@ function registerProfile(p) {
           S.profile = { ...p, username: ack.profile.username, country: ack.profile.country, adult: true };
           store.set('profile', S.profile);
           renderProfileChip();
+          afterRegistered();
         }
         resolve(ack);
       },
@@ -198,6 +228,15 @@ function onDisconnect(reason) {
 }
 
 function onMatchError({ error } = {}) {
+  if (error === 'premium_required') {
+    const g = S.filters.gender;
+    S.filters.gender = 'any';
+    store.set('filters', S.filters);
+    renderFilters();
+    if (S.state === 'searching') setState('idle');
+    openPaywall(g !== 'any' ? g : null);
+    return;
+  }
   if (error === 'profile_required' && S.profile) {
     S.resume = true;
     setState('idle');
@@ -225,7 +264,49 @@ function setState(s) {
     refreshEstimate();
   }
   if (IN_CALL_STATES.includes(s)) attach($('localVideo'), media.stream);
+  keepAwake(IN_CALL_STATES.includes(s));
   renderOverlay();
+}
+
+/* Keep the screen on during chats (Screen Wake Lock API; native flag in the app). */
+let wakeLock = null;
+async function keepAwake(on) {
+  if (native.available) { nativeCall('keepAwake', { on }, 3000).catch(() => {}); return; }
+  try {
+    if (on && !wakeLock && 'wakeLock' in navigator && !document.hidden) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } else if (!on && wakeLock) {
+      const l = wakeLock; wakeLock = null; await l.release();
+    }
+  } catch { wakeLock = null; }
+}
+
+/* ==========================================================================
+   Premium
+   ========================================================================== */
+function onPremiumChange(active, gender) {
+  if (active && gender) {
+    S.filters.gender = gender;
+    store.set('filters', S.filters);
+    renderFilters();
+    refreshEstimate();
+  } else if (!active && S.filters.gender !== 'any' && !IN_CALL_STATES.includes(S.state)) {
+    S.filters.gender = 'any';
+    store.set('filters', S.filters);
+    renderFilters();
+    refreshEstimate();
+  }
+}
+
+/** Android back button: close what's open, leave a chat, else let the app close. */
+function handleBack() {
+  if (pickerOpen()) { closePicker(); return true; }
+  if (anyModalOpen()) { closeModals(); return true; }
+  if (document.body.dataset.chat === 'open') { setChatOpen(false); return true; }
+  if (IN_CALL_STATES.includes(S.state)) { stopChat(); return true; }
+  if (!$('onboard').hidden && O.step > 1) { goStep(O.step - 1); return true; }
+  return false;
 }
 
 function attach(video, stream) {
@@ -456,6 +537,7 @@ function goLive(call) {
   sendPeerState();
   startCallTicker();
   const peer = S.match.peer;
+  notePeerCountry(peer.country, S.profile?.country);
   sysMessage(t('chat.connected', { name: bidi(peer.username), country: countryName(peer.country) }));
   announce(t('chat.connected', { name: bidi(peer.username), country: countryName(peer.country) }));
 }
@@ -1023,8 +1105,7 @@ function buildStatic() {
 }
 
 function renderAll() {
-  const native = UI_LOCALES.find((l) => l[0] === getLang())?.[1] || 'English';
-  $('langLabel').textContent = native;
+  $('langLabel').textContent = UI_LOCALES.find((l) => l[0] === getLang())?.[1] || 'English';
   renderFilters();
   renderInterests();
   renderProfileChip();
@@ -1038,6 +1119,7 @@ function renderAll() {
   if (hint) hint.textContent = t('chat.hint');
   if (!$('messages').children.length) clearChat();
   if (!$('settingsModal').hidden) renderSettings();
+  renderPremium();
 }
 
 function renderFilters() {
@@ -1072,6 +1154,7 @@ function renderInterests() {
 function renderProfileChip() {
   const p = S.profile;
   $('profileChip').hidden = !p;
+  showPremiumChip(!!p);
   if (!p) return;
   $('profileFlag').className = `fi fis fi-${p.country.toLowerCase()}`;
   $('profileName').textContent = p.username;
@@ -1138,6 +1221,8 @@ function renderPeer() {
   $('peerVerified').innerHTML = '<title></title><use href="#i-verified"/>';
   $('peerVerified').querySelector('title').textContent = t('peer.verified');
   $('peerCountry').textContent = countryName(p.country);
+  $('peerCard').classList.toggle('is-premium', !!p.premium);
+  $('peerPremium').setAttribute('aria-label', t('peer.premium'));
   const meta = $('peerMeta');
   meta.replaceChildren();
   if (p.languages?.length) meta.append(el('span', { text: t('peer.speaks', { langs: fmtList(p.languages.map(languageName)) }) }));
@@ -1174,8 +1259,8 @@ async function openSettings() {
 }
 
 function renderSettings() {
-  const native = UI_LOCALES.find((l) => l[0] === getLang())?.[1] || 'English';
-  setSelectBtn($('setLangBtn'), icon('i-globe'), native);
+  const nativeName = UI_LOCALES.find((l) => l[0] === getLang())?.[1] || 'English';
+  setSelectBtn($('setLangBtn'), icon('i-globe'), nativeName);
   document.querySelectorAll('#themeSeg button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.val === S.settings.theme)));
   $('setSafeView').checked = !!S.settings.safeView;
   $('setAutoNext').checked = !!S.settings.autoNext;
@@ -1314,6 +1399,10 @@ function wire() {
   $('genderFilter').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-val]');
     if (!b) return;
+    if (b.dataset.val !== 'any' && !premium.active) {
+      openPaywall(b.dataset.val); // Men / Women is a Premium filter; applied as soon as Premium starts
+      return;
+    }
     S.filters.gender = b.dataset.val;
     store.set('filters', S.filters);
     renderFilters();
@@ -1407,7 +1496,10 @@ function wire() {
   $('setMic').addEventListener('change', (e) => changeDevice('audio', e.target.value));
   $('setSpeaker').addEventListener('change', (e) => { S.settings.speakerId = e.target.value; saveSettings(); applySpeaker(); });
   $('editProfileBtn').addEventListener('click', () => openOnboarding(1, { editing: true }));
-  $('resetBtn').addEventListener('click', () => { store.clear(); location.reload(); });
+  $('resetBtn').addEventListener('click', () => {
+    const wipe = () => { resetPremiumLocal(); store.clear(); location.reload(); };
+    if (socket?.connected) socket.timeout(3000).emit('me:delete', wipe); else wipe();
+  });
 
   // onboarding
   $('onbNext').addEventListener('click', onbNext);

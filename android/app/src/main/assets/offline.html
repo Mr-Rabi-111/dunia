@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dunia</title>
+<style>
+  html,body{height:100%;margin:0}
+  body{display:grid;place-items:center;background:#0D1322;color:#E8ECF6;font:16px/1.5 system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box}
+  h1{font-size:22px;margin:16px 0 6px}
+  p{color:#9AA3B8;margin:0 0 22px}
+  button{border:0;border-radius:14px;padding:14px 28px;font:700 16px system-ui;color:#0D1322;background:linear-gradient(135deg,#46D6FF,#7BE3FF)}
+</style>
+</head>
+<body>
+<main>
+  <svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="g" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#46D6FF"/><stop offset="1" stop-color="#FF6B7A"/></linearGradient></defs><circle cx="16" cy="16" r="12" fill="none" stroke="url(#g)" stroke-width="2.6"/><path d="M5 16.5c2.8 0 3-5 5.7-5s2.8 10 5.5 10 2.8-10 5.5-10 3 5 5.3 5" fill="none" stroke="url(#g)" stroke-width="2.6" stroke-linecap="round"/></svg>
+  <h1 id="t">You're offline</h1>
+  <p id="s">Check your internet connection and try again.</p>
+  <button id="b" type="button" onclick="retry()">Try again</button>
+</main>
+<script>
+  function retry() { var u = new URLSearchParams(location.search).get('u'); if (u && /^https?:\/\//.test(u)) location.replace(u); else history.back(); }
+  var hi = (navigator.language || '').indexOf('hi') === 0;
+  if (hi) { t.textContent = 'आप ऑफ़लाइन हैं'; s.textContent = 'अपना इंटरनेट कनेक्शन देखें और फिर कोशिश करें।'; b.textContent = 'फिर कोशिश करें'; }
+</script>
+</body>
+</html>

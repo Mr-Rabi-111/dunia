@@ -98,3 +98,22 @@ button.snap { cursor: zoom-in; }
   .bar-row { grid-template-columns: 110px minmax(0, 1fr) 40px; }
   .admin .tagline { display: none; }
 }
+
+/* Payments */
+.pay-mode { font-size: 12px; color: var(--muted); }
+.rev { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.rev div { padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+.rev strong { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.rev span { font-size: 12px; color: var(--muted); }
+.sub-head { font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 8px; }
+.orders { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow: auto; }
+.order { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; padding: 10px 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); font-size: 13px; }
+.order strong { font-size: 14px; }
+.order code { font-size: 13px; letter-spacing: 0.04em; }
+.order .muted { color: var(--muted); grid-column: 1 / -1; }
+.order-acts { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+.order-acts .btn { min-height: 32px; padding: 0 12px; font-size: 12.5px; border-radius: 9px; }
+.reconcile { margin-top: 12px; font-size: 13px; }
+.reconcile summary { cursor: pointer; font-weight: 700; }
+.reconcile p { color: var(--muted); }
+.reconcile textarea { width: 100%; min-height: 90px; resize: vertical; margin-bottom: 8px; font: inherit; padding: 10px; }

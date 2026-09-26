@@ -199,14 +199,49 @@ function renderBans(bans) {
   }));
 }
 
+const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+const PLAN_LABEL = { min15: '15 min', hour1: '1 hour', day1: '1 day', week1: '1 week', month1: '1 month' };
+
+function renderPayments(data) {
+  const s = data.summary;
+  $('payMode').textContent = `Mode: ${s.verifyMode}`;
+  const tile = (value, label) => el('div', {}, el('strong', { text: value }), el('span', { text: label }));
+  $('revenue').replaceChildren(
+    tile(inr.format(s.todayInr), 'Confirmed today'),
+    tile(inr.format(s.weekInr), 'Last 7 days'),
+    tile(`${nf.format(s.premiumActive)}`, 'Premium now'),
+  );
+  const box = $('orders');
+  const pending = data.orders.filter((o) => o.status === 'submitted');
+  if (!pending.length) {
+    box.replaceChildren(el('p', { class: 'empty', text: `Nothing waiting. All-time confirmed: ${inr.format(s.totalInr)}.` }));
+    return;
+  }
+  box.replaceChildren(...pending.map((o) => {
+    const act = (label, cls, fn) => el('button', { class: `btn ${cls}`, type: 'button', text: label, onclick: async () => {
+      try { await fn(); refresh(); } catch (e) { toast(e.message); }
+    } });
+    return el('div', { class: 'order' },
+      el('strong', { text: `${inr.format(o.inr)} · ${PLAN_LABEL[o.planId] || o.planId}` }),
+      el('code', { text: o.code }),
+      el('span', { class: 'muted', text: `UTR ${o.utr || '—'} · ${ago(o.submittedAt || o.createdAt)}${o.grantedMinutes ? ` · ${o.grantedMinutes} min given now` : ''}` }),
+      el('div', { class: 'order-acts' },
+        act('Approve', 'btn-primary', async () => { await api(`/payments/${o.id}/approve`, { method: 'POST' }); toast('Approved. Premium extended.'); }),
+        act('Reject', 'btn-ghost', async () => { await api(`/payments/${o.id}/reject`, { method: 'POST', body: '{}' }); toast('Rejected.'); }),
+        act('Reject & block', 'btn-restrict', async () => { await api(`/payments/${o.id}/reject`, { method: 'POST', body: JSON.stringify({ block: true }) }); toast('Rejected; payments blocked for that device.'); })));
+  }));
+}
+
 // ------------------------------------------------------------------- flow
 async function refresh() {
   try {
-    const [o, reps, bans] = await Promise.all([
+    const [o, reps, bans, pays] = await Promise.all([
       api('/overview'),
       api(`/reports?limit=60${status ? `&status=${status}` : ''}`),
       api('/bans'),
+      api('/payments?limit=100'),
     ]);
+    renderPayments(pays);
     renderKpis(o);
     renderCountries(o.countries);
     renderReports(reps.reports);
@@ -264,6 +299,16 @@ $('reportTabs').addEventListener('click', (e) => {
   status = b.dataset.status;
   $('reportTabs').querySelectorAll('button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
   refresh();
+});
+$('reconcileBtn').addEventListener('click', async () => {
+  const text = $('reconcileText').value;
+  if (!text.trim()) return;
+  try {
+    const r = await api('/payments/reconcile', { method: 'POST', body: JSON.stringify({ text }) });
+    toast(`Found ${r.found} UTR numbers, approved ${r.approved} payments.`);
+    $('reconcileText').value = '';
+    refresh();
+  } catch (e) { toast(e.message); }
 });
 $('lightbox').addEventListener('click', () => { $('lightbox').hidden = true; });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('lightbox').hidden = true; });

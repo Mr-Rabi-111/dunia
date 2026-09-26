@@ -113,3 +113,24 @@ export const REPORT_REASONS = {
 };
 
 export const REACTIONS = ['👋', '😂', '❤️', '👍', '🔥', '😮'];
+
+// ---------------------------------------------------------------------------
+// Premium (the only paid feature: choosing to meet only men or only women).
+// Matching with anyone, and country/language filters, are always free.
+//
+// `inr`  = price when paying with UPI (web, and the Android app where allowed).
+// `play` = Google Play product id. Its price is set in Play Console (Google's
+//          minimum in India is ₹10, so the 15-minute pass is UPI-only).
+// Passes are one-time purchases that ADD time; they never auto-renew.
+// ---------------------------------------------------------------------------
+export const PLANS = [
+  { id: 'min15',  minutes: 15,        inr: 1,   play: null },               // UPI only (web + direct APK)
+  { id: 'hour1',  minutes: 60,        inr: 3,   play: null },               // below Google Play's ₹10 minimum: UPI only
+  { id: 'day1',   minutes: 24 * 60,   inr: 19,  play: 'dunia_pass_day1' },
+  { id: 'week1',  minutes: 7 * 1440,  inr: 69,  play: 'dunia_pass_week1', tag: 'popular' },
+  { id: 'month1', minutes: 30 * 1440, inr: 149, play: 'dunia_pass_month1', tag: 'best' },
+];
+export const PLAN_BY_ID = Object.fromEntries(PLANS.map((p) => [p.id, p]));
+
+// Daily reward for coming back (after finishing a chat that day): minutes by streak day 1..7, then repeats.
+export const STREAK_MINUTES = [5, 5, 10, 10, 15, 15, 30];

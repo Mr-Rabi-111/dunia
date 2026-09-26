@@ -20,7 +20,7 @@
  *
  *  3. SOFT scoring among compatible candidates (highest wins, ties -> oldest):
  *       score = 3·sharedInterests(≤3) + 4·sharesALanguage + 1·sameContinent
- *             + 2·log2(1 + waitSeconds/10)
+ *             + 2·log2(1 + waitSeconds/10) + 2·premium
  *     The wait term grows without bound, so nobody starves: after ~30 s a
  *     waiting person outranks a stranger who merely shares a language.
  *
@@ -29,7 +29,7 @@
  *     anything the scan bound skipped.
  */
 
-const DEFAULT_WEIGHTS = { interest: 3, language: 4, region: 1, wait: 2 };
+const DEFAULT_WEIGHTS = { interest: 3, language: 4, region: 1, wait: 2, premium: 2 };
 const GENDERS = ['male', 'female'];
 
 export class Matchmaker {
@@ -92,7 +92,8 @@ export class Matchmaker {
       this.w.interest * Math.min(shared, 3) +
       this.w.language * sharesLanguage +
       this.w.region * sameRegion +
-      this.w.wait * Math.log2(1 + waitSec / 10)
+      this.w.wait * Math.log2(1 + waitSec / 10) +
+      this.w.premium * (cand.premium ? 1 : 0)      // Premium: matched a little faster
     );
   }
 

@@ -13,6 +13,8 @@ people recognise it, which is why it was chosen as a global brand.
 | ![Call on desktop](docs/screenshots/call-desktop.png) | ![Call on a phone](docs/screenshots/call-phone.png) | ![Arabic chat](docs/screenshots/chat-arabic-rtl.png) |
 | **Lobby with filters** | **Report sheet** | **Moderation console** |
 | ![Lobby](docs/screenshots/lobby-desktop.png) | ![Report](docs/screenshots/report-phone.png) | ![Admin](docs/screenshots/moderation-console.png) |
+| **Premium paywall** | **UPI checkout (any UPI app)** | **Rewards** |
+| ![Paywall](docs/screenshots/paywall-phone.png) | ![UPI](docs/screenshots/upi-checkout-phone.png) | ![Rewards](docs/screenshots/rewards-phone.png) |
 
 *(Screenshots from the automated browser test; the green shapes are Chromium's fake camera.)*
 
@@ -22,14 +24,17 @@ people recognise it, which is why it was chosen as a global brand.
 
 | Area | Highlights |
 |---|---|
-| **Onboarding** | 4 steps: name (with "Surprise me") → male/female → country (auto-detected, searchable flag picker) + languages you speak + 18+ consent → camera check with live mic meter |
+| **Onboarding** | 4 steps: name (with “Surprise me”) → male/female → country (auto-detected, searchable flag picker) + languages you speak + 18+ consent → camera check with live mic meter |
 | **Matching** | Gender, country and language filters, **always mutual**; interest and language-aware scoring; fairness aging; rematch cooldown; blocks. Handles ~28,500 searches/s on one core |
 | **Worldwide** | **20 interface languages** (auto-detected), right-to-left Arabic & Urdu, 201 countries and territories with SVG flags, country & language names localised automatically, on-device message translation (Chrome) |
-| **Call** | Peer-to-peer WebRTC video, "Connecting…" until the first frame, connection-quality meter, timer, emoji reactions, mute/camera state shown to the partner, camera flip & device picker, draggable self-view, swipe-left to skip on phones |
+| **Call** | Peer-to-peer WebRTC video, “Connecting…” until the first frame, connection-quality meter, timer, emoji reactions, mute/camera state shown to the partner, camera flip & device picker, draggable self-view, swipe-left to skip on phones |
 | **Chat** | Typing indicator, translate button, links/phones/e-mails/@handles masked automatically, blocked-word list |
-| **Safety** | Report (7 reasons) with video snapshot + recent messages as evidence, block, weighted auto-restriction by distinct reporters, CGNAT-aware IP handling, optional "blur new video until I tap" |
+| **Safety** | Report (7 reasons) with video snapshot + recent messages as evidence, block, weighted auto-restriction by distinct reporters, CGNAT-aware IP handling, optional “blur new video until I tap” |
+| **Premium & payments** | Matching with anyone is free; the **Men / Women filter is Premium**. Free 10-minute trial, then one-time passes **₹1 / 15 min, ₹3 / hour, ₹19 / day, ₹69 / week, ₹149 / month** (no auto-renewal). Pay with **any UPI app** (upi:// link + QR code to `abirkumar111@ybl`, UTR confirmation) or **Google Play Billing** in the Play Store app; server-side verification, restore, fraud limits, payments panel in `/admin` |
+| **Engagement** | Daily bonus streak (unlocked by a real chat), two-sided invite rewards with WhatsApp sharing, “Your world” country collection, expiry reminder — no dark patterns |
+| **Android app** | Kotlin WebView app (`android/`): Play Store build (Play Billing 8, target API 36) + direct APK (UPI); built by GitHub Actions |
 | **Operations** | Moderation console (`/admin`), Prometheus `/metrics`, `/healthz`, Docker + Caddy (auto-HTTPS) + coturn (TURN) stack, graceful shutdown, strict CSP |
-| **Quality** | 63 unit/integration tests, browser end-to-end test with real WebRTC, matchmaker benchmark, socket load test |
+| **Quality** | 80 unit/integration tests, browser end-to-end test with real WebRTC, matchmaker benchmark, socket load test |
 
 ## Quick start (local)
 
@@ -41,6 +46,12 @@ npm start
 
 Camera and microphone only work on `https://` or `localhost`. For phones on your Wi-Fi, use a tunnel
 (for example `npx localtunnel --port 3000`) or deploy (see below).
+
+## Android app (APK)
+
+See [docs/ANDROID.md](docs/ANDROID.md). Short version: push this folder to GitHub, set the variable
+`DUNIA_BASE_URL` to your server, run **Actions → Android**, and download `app-direct-release.apk`
+(UPI, install anywhere) and `app-play-release.aab` (upload to Google Play).
 
 ## Go live
 
@@ -64,6 +75,9 @@ calls behind strict networks connect). Open `https://your-domain/admin` and past
 | [docs/SAFETY.md](docs/SAFETY.md) | Trust & Safety | Moderation design, reports and restrictions, the moderator workflow, legal checklist |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Operators | Local, Docker/VPS, Cloudflare, TURN, monitoring, backups, upgrades |
 | [docs/I18N.md](docs/I18N.md) | Translators | Adding or fixing a language, right-to-left rules |
+| [docs/MONETIZATION.md](docs/MONETIZATION.md) | Founder / growth | Business model, pricing ladder, the psychology of each screen, retention loops, KPIs, unit economics, UPI → gateway path |
+| [docs/ANDROID.md](docs/ANDROID.md) | Anyone | Building the APK / AAB (GitHub Actions or Android Studio), the app ↔ web bridge |
+| [docs/PLAY-STORE.md](docs/PLAY-STORE.md) | Publisher | Google Play checklist: billing policy, products, data safety, content rating, child safety standards, listing text |
 
 ## Project layout
 
@@ -77,9 +91,12 @@ server/            Node.js signaling + matchmaking server (ES modules, no framew
   geo.js           client IP + country detection (CDN headers, optional GeoIP)
   turn.js          ICE servers with short-lived TURN credentials
   admin.js         moderator API       metrics.js  Prometheus metrics
+  premium.js       passes, UPI orders/UTR, trial, daily bonus, referrals
+  play.js          Google Play purchase verification (service-account JWT)
 shared/data.js     countries, languages, locales, interests (used by server AND browser)
 public/            the web app (no build step): index.html, css/, js/, locales/*.json (20 languages)
   admin.html       moderation console        legal.html  guidelines, privacy, terms (templates)
+android/           Kotlin Android app (play + direct flavors), store-listing graphics
 test/              node:test unit + integration tests, e2e/ browser test
 bench/             matchmaker benchmark, socket load test
 deploy/            Caddyfile, turnserver.conf         Dockerfile, docker-compose.yml, .env.example
@@ -91,8 +108,8 @@ deploy/            Caddyfile, turnserver.conf         Dockerfile, docker-compose
 |---|---|
 | `npm start` | Run the server (reads `.env` if present) |
 | `npm run dev` | Run with auto-restart on file changes |
-| `npm test` | 63 unit + integration tests (≈2 s) |
-| `npm run test:e2e` | Two real browsers, real video call, report → moderation console (`npx playwright install chromium` first) |
+| `npm test` | 80 unit + integration tests (≈3 s) |
+| `npm run test:e2e` | Real browsers: video call, report → moderation console, Premium trial, UPI checkout → admin approval (`npx playwright install chromium` first) |
 | `npm run bench` | Matchmaker benchmark on a realistic population |
 | `npm run loadtest -- 3000 60` | 3,000 simulated people for 60 s against a real server process |
 

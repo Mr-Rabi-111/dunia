@@ -1,0 +1,77 @@
+# Builds the Dunia Android app on GitHub's servers (free for public repos).
+#
+#  Outputs (Actions → this run → Artifacts):
+#    dunia-direct-apk   app-direct-release.apk  → install on any phone / share from your website (UPI)
+#    dunia-play-aab     app-play-release.aab    → upload to Google Play Console
+#    dunia-play-apk     app-play-release.apk    → test the Play build on a phone
+#
+#  Setup (Settings → Secrets and variables → Actions):
+#    Variable  DUNIA_BASE_URL        https://your-domain  (where the Dunia server runs)
+#    Variable  DUNIA_APP_ID          app.dunia.chat       (optional)
+#    Secret    DUNIA_KEYSTORE_BASE64 base64 of your upload keystore (.jks)
+#    Secret    DUNIA_KEYSTORE_PASSWORD, DUNIA_KEY_ALIAS, DUNIA_KEY_PASSWORD
+#  Without the keystore secrets the release builds are signed with a debug key
+#  (fine for testing, NOT accepted by Google Play).
+name: Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android.yml']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.DUNIA_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            echo "DUNIA_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No DUNIA_KEYSTORE_BASE64 secret: release builds use the debug key (not accepted by Google Play)."
+          fi
+
+      - name: Build APKs and Play bundle
+        env:
+          DUNIA_KEYSTORE_PASSWORD: ${{ secrets.DUNIA_KEYSTORE_PASSWORD }}
+          DUNIA_KEY_ALIAS: ${{ secrets.DUNIA_KEY_ALIAS }}
+          DUNIA_KEY_PASSWORD: ${{ secrets.DUNIA_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon \
+            -PduniaBaseUrl="${{ vars.DUNIA_BASE_URL || 'https://dunia.example.com' }}" \
+            -PduniaAppId="${{ vars.DUNIA_APP_ID || 'app.dunia.chat' }}" \
+            -PduniaVersionCode="${{ github.run_number }}" \
+            assembleDirectRelease assemblePlayRelease bundlePlayRelease
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dunia-direct-apk
+          path: android/app/build/outputs/apk/direct/release/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dunia-play-aab
+          path: android/app/build/outputs/bundle/playRelease/*.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dunia-play-apk
+          path: android/app/build/outputs/apk/play/release/*.apk

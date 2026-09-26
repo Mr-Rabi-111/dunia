@@ -16,7 +16,8 @@ before(async () => {
   fs.writeFileSync(path.join(dataDir, 'blocked-words.txt'), 'badword\n');
   dunia = await createDunia({
     dataDir, persist: false, adminToken: ADMIN, rematchCooldownSec: 0,
-    sweepIntervalMs: 200, maxConnPerIp: 500, autoBanScore: 4,
+    sweepIntervalMs: 200, maxConnPerIp: 500, autoBanScore: 4, premiumWatchMs: 150,
+    upiVpa: 'abirkumar111@ybl', upiVerify: 'provisional',
   });
   const port = await dunia.listen(0, '127.0.0.1');
   url = `http://127.0.0.1:${port}`;
@@ -79,7 +80,8 @@ test('cannot search without a profile', async () => {
 });
 
 test('gender + country filters are mutual, with peer profile delivered', async () => {
-  const seeker = await user({ username: 'Asha', gender: 'female', country: 'IN', languages: ['hi', 'en'] });
+  const seeker = await user({ username: 'Asha', gender: 'female', country: 'IN', languages: ['hi', 'en'] }, { deviceId: 'asha-device-00000001' });
+  dunia.premium.grant('asha-device-00000001', 60, 'test'); // gender filter is Premium
   const wrong = await user({ username: 'Tom', gender: 'male', country: 'US' });
   const right = await user({ username: 'Arjun', gender: 'male', country: 'IN', languages: ['hi'] });
   find(seeker, { gender: 'male', country: 'IN' }, ['music']);
@@ -209,4 +211,73 @@ test('security headers are sent', async () => {
   assert.match(res.headers.get('content-security-policy'), /default-src 'self'/);
   assert.equal(res.headers.get('x-frame-options'), 'DENY');
   assert.match(res.headers.get('permissions-policy'), /camera=\(self\)/);
+});
+
+
+test('Premium: men-only / women-only needs Premium; anyone stays free; trial unlocks it', async () => {
+  const s = await user({ gender: 'male' }, { deviceId: 'premium-device-00001' });
+  find(s, { gender: 'female' });
+  assert.equal((await once(s, 'match:error')).error, 'premium_required');
+  find(s, { country: 'IN' });            // country filter is free
+  await once(s, 'match:searching');
+  s.emit('match:stop');
+  const trial = await s.timeout(2000).emitWithAck('reward:trial');
+  assert.equal(trial.ok, true);
+  assert.ok(trial.until > Date.now() + 9 * 60_000);
+  const again = await s.timeout(2000).emitWithAck('reward:trial');
+  assert.deepEqual(again, { ok: false, error: 'trial_used' });
+  find(s, { gender: 'female' });
+  await once(s, 'match:searching');
+  // Premium runs out while waiting → filter switches off, user keeps searching for anyone.
+  dunia.premium.devices.get('premium-device-00001').until = Date.now() + 100;
+  await once(s, 'premium:expired', 3000);
+  assert.equal(dunia.mm.get(s.id).filters.gender, 'any');
+  s.emit('match:stop');
+});
+
+test('UPI: order → QR → UTR → Premium, then admin reconciles from a pasted statement', async () => {
+  const s = await user({}, { deviceId: 'upi-device-000000001' });
+  const c = await s.timeout(2000).emitWithAck('pay:create', { planId: 'week1' });
+  assert.equal(c.ok, true);
+  assert.match(c.order.uri, /^upi:\/\/pay\?pa=abirkumar111%40ybl&pn=Dunia&am=69\.00&cu=INR&tn=Dunia%20DN/);
+  const qr = await fetch(url + c.order.qr);
+  assert.equal(qr.status, 200);
+  assert.match(qr.headers.get('content-type'), /svg/);
+  assert.match(await qr.text(), /^<svg/);
+  const status = once(s, 'premium:status');
+  const sub = await s.timeout(2000).emitWithAck('pay:submit', { orderId: c.order.id, utr: '6123 4567 8901' });
+  assert.equal(sub.status, 'partial');
+  assert.equal(sub.grantedMinutes, 60);
+  assert.equal((await status).active, true);
+  const dup = await s.timeout(2000).emitWithAck('pay:submit', { orderId: c.order.id, utr: '612345678901' });
+  assert.equal(dup.ok, false);
+
+  const H = { Authorization: `Bearer ${ADMIN}`, 'Content-Type': 'application/json' };
+  const pending = await (await fetch(`${url}/api/admin/payments?status=submitted`, { headers: H })).json();
+  assert.ok(pending.orders.some((o) => o.utr === '612345678901' && o.inr === 69));
+  const rec = await (await fetch(`${url}/api/admin/payments/reconcile`, { method: 'POST', headers: H, body: JSON.stringify({ text: 'Received ₹69.00 UPI Ref No 612345678901 from…' }) })).json();
+  assert.deepEqual(rec, { found: 1, approved: 1 });
+  const st = await s.timeout(2000).emitWithAck('premium:get');
+  assert.ok(st.status.until > Date.now() + 6.9 * 86_400_000, 'full week active after approval');
+  const ov = await (await fetch(`${url}/api/admin/overview`, { headers: H })).json();
+  assert.ok(ov.revenue.totalInr >= 69);
+  s.close();
+});
+
+test('Google Play purchases are refused when verification is not configured', async () => {
+  const s = await user({}, { deviceId: 'play-device-00000001' });
+  const r = await s.timeout(2000).emitWithAck('pay:play', { productId: 'dunia_pass_day1', purchaseToken: 'fake-token' });
+  assert.deepEqual(r, { ok: false, error: 'play_invalid' });
+  s.close();
+});
+
+test('daily reward unlocks after a chat of 30+ seconds', async () => {
+  const a = await user({}, { deviceId: 'daily-device-0000001' });
+  const locked = await a.timeout(2000).emitWithAck('reward:daily');
+  assert.equal(locked.error, 'daily_locked');
+  dunia.premium.noteCall('daily-device-0000001', 45);
+  const ok = await a.timeout(2000).emitWithAck('reward:daily');
+  assert.equal(ok.ok, true);
+  assert.equal(ok.minutes, 5);
+  a.close();
 });

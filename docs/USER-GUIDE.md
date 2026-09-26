@@ -93,7 +93,35 @@ or turn off automatic searching in Settings.
 - Never share your address, workplace, passwords, money or explicit images, and be wary of anyone who asks you to
   continue on another app.
 
-## 5. Settings
+## 5. Premium, rewards and invites
+
+**Everything is free except one thing:** choosing to meet *only men* or *only women*. Tap **Men** or
+**Women** in the lobby and the Premium window opens.
+
+1. **First time?** Tap **Try it free for 10 minutes**. The filter you picked switches on right away.
+2. **Or choose a pass:** 15 minutes ₹1 · 1 hour ₹3 · 1 day ₹19 · 1 week ₹69 · 1 month ₹149.
+   You pay once. **Nothing renews automatically.** Buying again adds time.
+3. **Paying with UPI** (website and the downloaded app):
+   - On a phone, tap **Open my UPI app** and pick Google Pay, PhonePe, Paytm, BHIM or your bank app.
+   - On a computer, **scan the QR code** with any UPI app on your phone.
+   - After paying, type the **12-digit UTR / reference number** from the payment receipt and tap
+     **I've paid — turn on Premium**. Premium starts immediately (for longer passes, the rest starts
+     once the payment is confirmed, usually within a few hours).
+4. **Paying in the Play Store app:** tap **Pay with Google Play** and confirm in Google's window.
+5. The gold chip at the top shows how much Premium time is left. Two minutes before it ends you'll
+   get a reminder with an **Extend** button. When it ends, your filter goes back to *Anyone*; chatting
+   stays free.
+6. **New phone?** Open the Premium window → **Restore a purchase** → enter your UTR or Google order ID.
+
+**Free Premium minutes:**
+
+- **Daily bonus:** have one chat longer than 30 seconds, then claim 5–30 free minutes. Come back
+  every day to grow your streak (5, 5, 10, 10, 15, 15, 30 minutes).
+- **Invite friends:** Rewards → **Share link**. When your friend joins with it and finishes their
+  first chat, you *both* get 30 minutes.
+- **Your world:** every new country you talk to is added to your collection of flags.
+
+## 6. Settings
 
 Open with the sliders button at the top:
 
@@ -103,7 +131,7 @@ Open with the sliders button at the top:
 - **Edit profile**: change name, gender, country or languages (tapping your name at the top does the same)
 - **Reset everything on this device**: removes your profile, settings and device ID from this browser
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 | Problem | Fix |
 |---|---|
@@ -115,7 +143,7 @@ Open with the sliders button at the top:
 | Echo or feedback | Use headphones, or lower your speaker volume. |
 | "Your access is paused" | Several people reported a break of the guidelines. It shows when you can return. If you think it's a mistake, contact the site's appeals address. |
 
-## 7. Privacy in one paragraph
+## 8. Privacy in one paragraph
 
 Video and audio go directly between you and the other person, encrypted, and are never recorded. Your profile lives
 in your browser and is sent to the server only while you're connected. Chat messages are passed along, not stored,

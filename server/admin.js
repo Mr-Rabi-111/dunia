@@ -7,7 +7,7 @@ import { COUNTRY_CODES } from '../shared/data.js';
  *   Authorization: Bearer <ADMIN_TOKEN>
  * If ADMIN_TOKEN is not set, the whole API answers 404 (disabled).
  *
- * ctx = { config, safety, metrics, snapshot(), enforceBan(ban), countryCounts() }
+ * ctx = { config, safety, metrics, snapshot(), enforceBan(ban), countryCounts(), premium, pushPremium(deviceId) }
  */
 export function adminRouter(ctx) {
   const r = express.Router();
@@ -44,7 +44,51 @@ export function adminRouter(ctx) {
       countries,
       uptimeSec: Math.round((Date.now() - m.startedAt) / 1000),
       memoryMb: Math.round(process.memoryUsage().rss / 1048576),
+      revenue: ctx.premium ? ctx.premium.summary() : null,
     });
+  });
+
+  // ---------------------------------------------------------------- payments
+  r.get('/payments', (req, res) => {
+    const status = ['submitted', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : null;
+    const limit = Math.min(300, Math.max(1, parseInt(req.query.limit, 10) || 100));
+    res.json({ orders: ctx.premium.listOrders({ status, limit }), summary: ctx.premium.summary() });
+  });
+
+  r.post('/payments/:id/approve', (req, res) => {
+    const o = ctx.premium.approve(req.params.id);
+    if (!o) return res.status(404).json({ error: 'not_pending' });
+    ctx.metrics.inc('payments_approved_total');
+    ctx.pushPremium(o.deviceId);
+    res.json({ order: o });
+  });
+
+  r.post('/payments/:id/reject', (req, res) => {
+    const o = ctx.premium.reject(req.params.id, { block: !!(req.body && req.body.block) });
+    if (!o) return res.status(404).json({ error: 'not_pending' });
+    ctx.metrics.inc('payments_rejected_total');
+    ctx.pushPremium(o.deviceId);
+    res.json({ order: o });
+  });
+
+  /** body: { text } — paste UTRs from your bank / UPI business statement (any format; 12-digit numbers are extracted). */
+  r.post('/payments/reconcile', (req, res) => {
+    const text = String((req.body && req.body.text) || '').slice(0, 200_000);
+    const utrs = text.match(/\b\d{12}\b/g) || [];
+    const approved = ctx.premium.reconcile(utrs);
+    for (const o of approved) ctx.pushPremium(o.deviceId);
+    ctx.metrics.inc('payments_approved_total', approved.length);
+    res.json({ found: utrs.length, approved: approved.length });
+  });
+
+  /** Customer support: add Premium minutes to a device. body: { deviceId, minutes } */
+  r.post('/premium/grant', (req, res) => {
+    const deviceId = typeof req.body?.deviceId === 'string' ? req.body.deviceId : '';
+    const minutes = Math.min(60 * 24 * 90, Math.max(1, Number(req.body?.minutes) || 0));
+    if (!/^[A-Za-z0-9-]{16,64}$/.test(deviceId) || !minutes) return res.status(400).json({ error: 'bad_request' });
+    const until = ctx.premium.grant(deviceId, minutes, 'admin');
+    ctx.pushPremium(deviceId);
+    res.json({ until });
   });
 
   r.get('/reports', (req, res) => {
