@@ -1,0 +1,51 @@
+# Production stack: Dunia + Caddy (automatic HTTPS) + coturn (TURN relay).
+#   1. cp .env.example .env   and fill DOMAIN, PUBLIC_IP, TURN_SECRET, ADMIN_TOKEN
+#   2. point your domain's A record at this server
+#   3. docker compose up -d --build
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      TRUST_PROXY: "1"            # Caddy sits in front (use 2 if Cloudflare is also in front)
+      TURN_URLS: "turn:${DOMAIN}:3478?transport=udp,turn:${DOMAIN}:3478?transport=tcp"
+    volumes:
+      - dunia-data:/app/data      # bans, report metadata, blocked-words.txt
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+  coturn:
+    image: coturn/coturn:4.6
+    restart: unless-stopped
+    network_mode: host            # TURN needs real UDP ports; NAT'd Docker networking breaks relays
+    volumes:
+      - ./deploy/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command:
+      - -c
+      - /etc/coturn/turnserver.conf
+      - --static-auth-secret=${TURN_SECRET}
+      - --realm=${DOMAIN}
+      - --external-ip=${PUBLIC_IP}
+
+volumes:
+  dunia-data: {}
+  caddy-data: {}
+  caddy-config: {}

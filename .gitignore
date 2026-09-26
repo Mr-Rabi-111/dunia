@@ -1,0 +1,7 @@
+node_modules/
+.env
+data/safety.json
+data/safety.json.tmp
+*.log
+.DS_Store
+test-results/
